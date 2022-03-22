@@ -13,7 +13,7 @@ let network = NeuralNetwork(layers: [
 
 
 let x = Matrix([[0, 0], [1, 1], [1, 0], [0, 1]])
-let y = Matrix([[0], [1], [1], [1]])
+let y = Matrix([[0], [1], [0], [0]])
 
 //let x = Matrix([
 //	[0, 0, 1],
