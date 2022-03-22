@@ -1,26 +1,55 @@
 import Foundation
-
-
 import Accelerate
 
+
+//let mnist = Bundle.main.decode(Dataset.self, from: "mnistSmall.json")
+
+
+
 let network = NeuralNetwork(layers: [
-	DenseLayer(inputSize: 1, outputSize: 3, activation: Swish()),
-	DenseLayer(inputSize: 3, outputSize: 5, activation: Swish()),
-	DenseLayer(inputSize: 5, outputSize: 1, activation: Linear())
+	DenseLayer(inputSize: 2, outputSize: 3, activation: Swish()),
+	DenseLayer(inputSize: 3, outputSize: 1, activation: Swish())
 ])
 
 
+let x = Matrix([[0, 0], [1, 1], [1, 0], [0, 1]])
+let y = Matrix([[0], [1], [1], [1]])
 
-let x : Matrix = Matrix([
-	[1], [0]
-])
+//let x = Matrix([
+//	[0, 0, 1],
+//	[0, 1, 1],
+//	[1, 0, 0],
+//	[1, 1, 0],
+//	[1, 0, 1],
+//	[1, 1, 1],
+//])
+//
+//let y = Matrix([
+//	[0],
+//	[1],
+//	[0],
+//	[1],
+//	[1],
+//	[0]
+//])
 
-let y : Matrix = Matrix([
-	[0], [1]
-])
 
-network.fit(x: x, y: y, iterations: 10000, learningRate: 0.1)
-print(network.predict(x: Matrix([[0]])).data())
+//let x : [Matrix] = mnist.x_train.chunked(into: chunkSize).compactMap { Matrix($0) }
+//let y : [Matrix] = mnist.y_train.chunked(into: chunkSize).compactMap { Matrix($0) }
+let chunkSize = 64
+network.fit(
+	x: x,
+	y: y,
+	epochs: 10000,
+	learningRate: 0.1,
+	batchSize: 64
+)
+
+
+//[0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0]
+print(network.predict(x: x).formattedData())
+
+
 
 //
 //let nNeurons = 2

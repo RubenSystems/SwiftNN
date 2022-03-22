@@ -32,11 +32,12 @@ public class Matrix {
 	
 	///Random initaliser double between 0 and -1 
 	public static func random(size: MatrixSize, from: Double, to: Double) -> Matrix {
-		let data = (0..<size.columns * size.rows).map { _ in
+		let data = (0..<size.columns * size.rows).compactMap { _ in
 			2 * Double.random(in: 0..<1) - 1
 		}
 		return Matrix(data: data, size: size)
 	}
+	
 	
 	private enum MatrixOperationError: Error {
 		case IncorrectDimensions
@@ -69,6 +70,17 @@ extension Matrix {
 		
 		return Matrix(data: result, size: MatrixSize(rows: self.size().columns, columns: self.size().rows))
 	}
+	
+	public func formattedData() -> [[Double]] {
+		return self.data().chunked(into: self.size().columns)
+	}
+	
+	public func chunked(into: Int ) -> [Matrix] {
+		let data = formattedData().chunked(into: into).compactMap {
+			Matrix($0)
+		}
+		return data
+	}
 }
 
 
@@ -84,6 +96,16 @@ extension Matrix {
 	///Defining addition between Matrix and Matrix
 	public static func + (left: Matrix, right: Double) -> Matrix {
 		let result = vDSP.add(right, left.data())
+		return Matrix(data: result, size: left.size())
+	}
+	
+	public static func + (left: Matrix, right: [Double]) -> Matrix {
+		
+		let result = left.formattedData().compactMap {
+			vDSP.add($0, right)
+		}.flatMap {$0}
+		
+		
 		return Matrix(data: result, size: left.size())
 	}
 	
@@ -122,5 +144,16 @@ extension Matrix {
 				   vDSP_Length(left.size().rows), vDSP_Length(right.size().columns), vDSP_Length(right.size().rows))
 		
 		return Matrix(data: result, size: MatrixSize(rows: left.size().rows, columns: right.size().columns))
+	}
+	
+	
+}
+
+
+extension Array {
+	public func chunked(into size: Int) -> [[Element]] {
+		return stride(from: 0, to: count, by: size).map {
+			Array(self[$0 ..< Swift.min($0 + size, count)])
+		}
 	}
 }
