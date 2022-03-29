@@ -25,12 +25,10 @@ public class DenseLayer: Layer {
 	public init(inputSize: Int, outputSize: Int , activation: ActivationFunction) {
 		self.activationFunc = activation
 		//Output size is the same as the number of neurons
-		self.weights = Matrix.random(
-			size: MatrixSize(rows: inputSize, columns : outputSize),from: -1, to: 1
-		)
+		self.weights = Matrix.random(size: MatrixSize(rows: inputSize, columns : outputSize),from: -1, to: 1)
 		
 		self.bias = (0..<outputSize).map { _ in
-			1
+			Double.random(in: -0.1...0.1)
 		}
 		
 	}
@@ -56,41 +54,49 @@ public class NeuralNetwork {
 	}
 
 	
-	public func fit(x : Matrix, y: Matrix, epochs: Int, learningRate: Double, batchSize: Int = 64) {
+	public func fit(x xFit: Matrix, y yFit: Matrix, epochs: Int, learningRate: Double, batchSize: Int = 64) {
 		
+		let chunkedX = xFit.formattedData().chunked(into: batchSize).compactMap { Matrix($0) }
+		let chunkedY = yFit.formattedData().chunked(into: batchSize).compactMap { Matrix($0) }
+		
+
+		var errorAvg = 0.0
+		var errorCount = 0.0
 		for _ in 0...epochs {
-//			for (x, y) in zip(chunkedX, chunkedY){
+			errorAvg = 0
+			errorCount = 0
+			for (x, y) in zip(chunkedX, chunkedY){
 				//FPass
 				var prevOutput = x
 				for i in 0..<self.layers.count {
 					let currentOutput = ((try! Matrix.dot(prevOutput, layers[i].weights!)) + 1)
 					layers[i].output = layers[i].activation().run(matrix: currentOutput)
-					
 					prevOutput = layers[i].output!
-					
 				}
-			print(prevOutput.data())
+				
 				var error: Matrix?
 				var partialDerivitave: Matrix
 				//Backward pass
 				for i in (0..<layers.count).reversed() {
 					if i == layers.count - 1 {
 						error = try! layers[i].output! - y
+						errorCount += 1
+						errorAvg = errorAvg + ((((1 - vDSP.mean(error!.abs().data())) * 100) - errorAvg) / errorCount)
 					} else {
-
 						error = try! Matrix.dot(error!, layers[i + 1].weights!.t())
 					}
 					error = try! layers[i].activation().der(matrix: layers[i].output!) * error!
 					partialDerivitave = try! Matrix.dot((i == 0 ? x : layers[i - 1].output!).t(), error!)
 					layers[i].weights = try! layers[i].weights! + (partialDerivitave * -learningRate)
 					for c in partialDerivitave.formattedData() {
-						layers[i].bias = vDSP.subtract(layers[i].bias!, c)
+						layers[i].bias = vDSP.subtract(layers[i].bias!, vDSP.multiply(learningRate, c))
 					}
-					
 				}
-//			}
+			}
+			print(errorAvg)
 		}
 	}
+
 	
 	public func predict(x: Matrix) -> Matrix {
 		var prevOutput = x

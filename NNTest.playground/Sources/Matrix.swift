@@ -33,7 +33,7 @@ public class Matrix {
 	///Random initaliser double between 0 and -1 
 	public static func random(size: MatrixSize, from: Double, to: Double) -> Matrix {
 		let data = (0..<size.columns * size.rows).compactMap { _ in
-			2 * Double.random(in: 0..<1) - 1
+			Double.random(in: from..<to)
 		}
 		return Matrix(data: data, size: size)
 	}
@@ -69,6 +69,14 @@ extension Matrix {
 		vDSP_mtransD(self.data(), 1, &result, 1, vDSP_Length(self.size().columns), vDSP_Length(self.size().rows))
 		
 		return Matrix(data: result, size: MatrixSize(rows: self.size().columns, columns: self.size().rows))
+	}
+	
+	public func abs() -> Matrix {
+		var currentData = self.data()
+		var result = [Double](repeating: 0, count: data().count)
+		var n = Int32(data().count)
+		vvfabs(&result, &currentData, &n)
+		return Matrix(data: result, size: self.size())
 	}
 	
 	public func formattedData() -> [[Double]] {

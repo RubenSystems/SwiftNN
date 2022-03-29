@@ -26,6 +26,30 @@ public class Linear : ActivationFunction {
 	}
 }
 
+
+public struct ReLU : ActivationFunction {
+	
+	
+
+	public init(){}
+
+	public func run(matrix: Matrix) -> Matrix {
+
+		let zeros : [Double] = (0..<matrix.data().count).map { _ in
+			return 0
+		}
+
+		return Matrix(data: vDSP.maximum(matrix.data(), zeros), size: matrix.size())
+	}
+	
+	public func der(matrix: Matrix) -> Matrix {
+		return Matrix(data: matrix.data().map {
+			$0 > 0 ? 1 : 0
+		}, size: matrix.size())
+	}
+
+}
+
 public class Sigmoid : ActivationFunction {
 	public init(){}
 	

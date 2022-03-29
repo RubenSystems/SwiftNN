@@ -2,52 +2,85 @@ import Foundation
 import Accelerate
 
 
-//let mnist = Bundle.main.decode(Dataset.self, from: "mnistSmall.json")
 
 
+let mnist = Bundle.main.decode(Dataset.self, from: "mnist.json")
+
+
+
+let layer1 = DenseLayer(inputSize: 784, outputSize: 128, activation: ReLU())
+let layer2 =  DenseLayer(inputSize: 128, outputSize: 10, activation: Linear())
 
 let network = NeuralNetwork(layers: [
-	DenseLayer(inputSize: 2, outputSize: 3, activation: Swish()),
-	DenseLayer(inputSize: 3, outputSize: 1, activation: Swish())
+	layer1, layer2
 ])
 
+let generator = NeuralNetwork(layers: [
+	layer2
+])
 
-let x = Matrix([[0, 0], [1, 1], [1, 0], [0, 1]])
-let y = Matrix([[0], [1], [0], [0]])
-
-//let x = Matrix([
-//	[0, 0, 1],
-//	[0, 1, 1],
-//	[1, 0, 0],
-//	[1, 1, 0],
-//	[1, 0, 1],
-//	[1, 1, 1],
-//])
-//
-//let y = Matrix([
-//	[0],
-//	[1],
-//	[0],
-//	[1],
-//	[1],
-//	[0]
-//])
-
-
-//let x : [Matrix] = mnist.x_train.chunked(into: chunkSize).compactMap { Matrix($0) }
-//let y : [Matrix] = mnist.y_train.chunked(into: chunkSize).compactMap { Matrix($0) }
-let chunkSize = 64
 network.fit(
-	x: x,
-	y: y,
-	epochs: 10000,
+	x: mnist.xtrain,
+	y: mnist.ytrain,
+	epochs: 10,
 	learningRate: 0.1,
 	batchSize: 64
 )
 
+let index = 0
+let value = mnist.xtrain.formattedData()[index]
+let answer = mnist.ytrain.formattedData()[index]
+
+
+let imageData = network.predict(x: Matrix([value])).formattedData()
+
+
+//
+//let generatedImageData = imageData.data().map {
+//	PixelData(value: $0)
+//}
+//
+//
+//resizeImage(image: imageFromData(pixels: generatedImageData, width: 28, height: 28)!, targetSize: CGSize(width: 128, height: 128))
+
+//let colorSpace = CGColorSpaceCreateDeviceGray()
+//let bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue);
+//guard let bitmap = CGContext(data: nil, width: imageData.size().columns, height: imageData.size().rows, bitsPerComponent: 8, bytesPerRow: 0, space: colorSpace, bitmapInfo: bitmapInfo.rawValue) else {fatalError()}
+//
+//var bitmapData = UnsafeMutablePointer<UInt32>( OpaquePointer(bitmap.data) )
+//
+//for i in 0...imageData.data().count {
+//	bitmapData![i] = UInt32(imageData.data()[i])
+//}
+//
+//let imageRef = bitmap.makeImage()!
+//let image = UIImage(cgImage: imageRef)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 //[0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0]
-print(network.predict(x: x).formattedData())
+//print(network.predict(x: x).formattedData())
 
 
 

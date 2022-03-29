@@ -2,9 +2,16 @@ import Foundation
 
 public class Dataset: Codable {
 	
-	public let x_train : [[Double]]
-	public let y_train : [[Double]]
+	private let x_train : [[Double]]
+	private let y_train : [[Double]]
 
+	public var xtrain : Matrix {
+		return Matrix(x_train)
+	}
+	
+	public var ytrain : Matrix {
+		return Matrix(y_train)
+	}
 	
 }
 
@@ -18,9 +25,12 @@ extension Bundle {
 			fatalError("Failed to load \(file) from bundle.")
 		}
 		let decoder = JSONDecoder()
-		guard let loaded = try? decoder.decode(T.self, from: data) else {
-			fatalError("Failed to decode \(file) from bundle.")
+		let loaded: T
+		do {
+			loaded = try decoder.decode(T.self, from: data)
+			return loaded
+		} catch (let error) {
+			fatalError(error.localizedDescription)
 		}
-		return loaded
 	}
 }
