@@ -1,60 +1,58 @@
 import Foundation
 import Accelerate
+import UIKit
+
+
+
+let latentDim = 10
+let sublatentDim = 128
+
+let layers = [
+	DenseLayer(inputSize: 784, outputSize: sublatentDim, activation: ReLU()),
+	DenseLayer(inputSize: sublatentDim, outputSize: latentDim, activation: ReLU()),
+	DenseLayer(inputSize: latentDim, outputSize: sublatentDim, activation: ReLU()),
+	DenseLayer(inputSize: sublatentDim, outputSize: 784, activation: Sigmoid())
+]
+
+for (k, v) in layers.enumerated(){
+	v.load(filename: "\(k).json")
+}
+
+
+
+let network = NeuralNetwork(layers: layers)
+
+//network.fit(
+//	x: mnist.xtrain,
+//	y: mnist.xtrain,
+//	epochs: 10,
+//	learningRate: 0.1,
+//	batchSize: 64
+//)
+
+
+let dataset = Bundle.main.decode(Dataset.self, from: "mnist.json").xtrain.formattedData()
+
+let index = 2
+let imageData = network.predict(x: Matrix([dataset[index]]))
 
 
 
 
-let mnist = Bundle.main.decode(Dataset.self, from: "mnist.json")
+let realImageData = dataset[index].map {
+	PixelData(value: $0)
+}
 
 
+let generatedImageData = imageData.data().map {
+	PixelData(value: $0)
+}
 
-let layer1 = DenseLayer(inputSize: 784, outputSize: 128, activation: ReLU())
-let layer2 =  DenseLayer(inputSize: 128, outputSize: 10, activation: Linear())
-
-let network = NeuralNetwork(layers: [
-	layer1, layer2
-])
-
-let generator = NeuralNetwork(layers: [
-	layer2
-])
-
-network.fit(
-	x: mnist.xtrain,
-	y: mnist.ytrain,
-	epochs: 10,
-	learningRate: 0.1,
-	batchSize: 64
-)
-
-let index = 0
-let value = mnist.xtrain.formattedData()[index]
-let answer = mnist.ytrain.formattedData()[index]
+resizeImage(image: imageFromData(pixels: realImageData, width: 28, height: 28)!, targetSize: CGSize(width: 128, height: 128))
 
 
-let imageData = network.predict(x: Matrix([value])).formattedData()
+resizeImage(image: imageFromData(pixels: generatedImageData, width: 28, height: 28)!, targetSize: CGSize(width: 128, height: 128))
 
-
-//
-//let generatedImageData = imageData.data().map {
-//	PixelData(value: $0)
-//}
-//
-//
-//resizeImage(image: imageFromData(pixels: generatedImageData, width: 28, height: 28)!, targetSize: CGSize(width: 128, height: 128))
-
-//let colorSpace = CGColorSpaceCreateDeviceGray()
-//let bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue);
-//guard let bitmap = CGContext(data: nil, width: imageData.size().columns, height: imageData.size().rows, bitsPerComponent: 8, bytesPerRow: 0, space: colorSpace, bitmapInfo: bitmapInfo.rawValue) else {fatalError()}
-//
-//var bitmapData = UnsafeMutablePointer<UInt32>( OpaquePointer(bitmap.data) )
-//
-//for i in 0...imageData.data().count {
-//	bitmapData![i] = UInt32(imageData.data()[i])
-//}
-//
-//let imageRef = bitmap.makeImage()!
-//let image = UIImage(cgImage: imageRef)
 
 
 

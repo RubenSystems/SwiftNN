@@ -1,25 +1,31 @@
 import Foundation
 import Accelerate
 
-public protocol Layer {
+public struct WeightBiasLoader: Codable {
+	private let weights: [[Double]]
+	private let bias: [[Double]]
 	
-	var output: Matrix? {get set}
-	var weights: Matrix? {get set}
-	var bias: [Double]? {get set}
+	public var Weights : Matrix {
+		return Matrix(weights)
+	}
 	
-	
-	func size () -> MatrixSize
-	
-	func activation() -> ActivationFunction
+	public var Bias : [Double] {
+		return bias[0]
+	}
 }
 
 
-public class DenseLayer: Layer {
+public class DenseLayer {
+	public var a_output: Matrix?
+	
 	
 	private let activationFunc : ActivationFunction
-	public var weights : Matrix?
-	public var bias : [Double]?
+	public var weights : Matrix
+	public var bias : [Double]
 	public var output: Matrix?
+	
+	public var newWeights: Matrix?
+	public var newBias: [Double]?
 	
 	
 	public init(inputSize: Int, outputSize: Int , activation: ActivationFunction) {
@@ -30,26 +36,35 @@ public class DenseLayer: Layer {
 		self.bias = (0..<outputSize).map { _ in
 			Double.random(in: -0.1...0.1)
 		}
-		
 	}
 
 	public func size() -> MatrixSize {
-		guard let weights = weights else {
-			fatalError("Layer has not yet been compiled")
-		}
-
 		return weights.size();
 	}
 	
 	public func activation() -> ActivationFunction {
 		return activationFunc
 	}
+	
+	public func update() {
+		self.weights = newWeights!
+		newWeights = nil
+		
+		self.bias = newBias! 
+		newBias = nil
+	}
+	
+	public func load(filename: String) {
+		let loader = Bundle.main.decode(WeightBiasLoader.self, from: filename)
+		self.weights = loader.Weights
+		self.bias = loader.Bias
+	}
 }
 
 public class NeuralNetwork {
-	private var layers: [Layer]
+	private var layers: [DenseLayer]
 	
-	public init (layers: [Layer]) {
+	public init (layers: [DenseLayer]) {
 		self.layers = layers
 	}
 
@@ -60,18 +75,14 @@ public class NeuralNetwork {
 		let chunkedY = yFit.formattedData().chunked(into: batchSize).compactMap { Matrix($0) }
 		
 
-		var errorAvg = 0.0
-		var errorCount = 0.0
-		for _ in 0...epochs {
-			errorAvg = 0
-			errorCount = 0
+		for epoch in 0...epochs {
 			for (x, y) in zip(chunkedX, chunkedY){
 				//FPass
 				var prevOutput = x
 				for i in 0..<self.layers.count {
-					let currentOutput = ((try! Matrix.dot(prevOutput, layers[i].weights!)) + 1)
-					layers[i].output = layers[i].activation().run(matrix: currentOutput)
-					prevOutput = layers[i].output!
+					layers[i].output = ((try! Matrix.dot(prevOutput, layers[i].weights)) + layers[i].bias)
+					layers[i].a_output = layers[i].activation().run(matrix: layers[i].output!)
+					prevOutput = layers[i].a_output!
 				}
 				
 				var error: Matrix?
@@ -79,21 +90,22 @@ public class NeuralNetwork {
 				//Backward pass
 				for i in (0..<layers.count).reversed() {
 					if i == layers.count - 1 {
-						error = try! layers[i].output! - y
-						errorCount += 1
-						errorAvg = errorAvg + ((((1 - vDSP.mean(error!.abs().data())) * 100) - errorAvg) / errorCount)
+						error = (try! layers[i].a_output! - y) * 2
+						
 					} else {
-						error = try! Matrix.dot(error!, layers[i + 1].weights!.t())
+						error = try! Matrix.dot(error!, layers[i + 1].weights.t())
 					}
-					error = try! layers[i].activation().der(matrix: layers[i].output!) * error!
-					partialDerivitave = try! Matrix.dot((i == 0 ? x : layers[i - 1].output!).t(), error!)
-					layers[i].weights = try! layers[i].weights! + (partialDerivitave * -learningRate)
+					error = try! layers[i].activation().der(matrix: layers[i].a_output!) * error!
+					partialDerivitave = try! Matrix.dot((i == 0 ? x : layers[i - 1].a_output!).t(), error!)
+					layers[i].newWeights = try! layers[i].weights + (partialDerivitave * -learningRate)
+					layers[i].newBias = layers[i].bias
 					for c in partialDerivitave.formattedData() {
-						layers[i].bias = vDSP.subtract(layers[i].bias!, vDSP.multiply(learningRate, c))
+						layers[i].newBias = vDSP.subtract(layers[i].bias, vDSP.multiply(learningRate, c))
 					}
 				}
+				_ = layers.map {$0.update()}
 			}
-			print(errorAvg)
+			print(epoch)
 		}
 	}
 
@@ -101,7 +113,7 @@ public class NeuralNetwork {
 	public func predict(x: Matrix) -> Matrix {
 		var prevOutput = x
 		for i in 0..<self.layers.count {
-			let currentOutput = (try! Matrix.dot(prevOutput, layers[i].weights!)) + 1
+			let currentOutput = (try! Matrix.dot(prevOutput, layers[i].weights)) + layers[i].bias
 			prevOutput = layers[i].activation().run(matrix: currentOutput)
 		}
 		return prevOutput
